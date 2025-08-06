@@ -6,7 +6,7 @@ echo "开始执行 Cloudflare IP 测速..."
 
 # 获取前5个最优IP
 echo "获取最优IP列表..."
-head -n 6 result.txt | tail -n 5 | awk -F, '{print $1}' > top_ips.txt
+head -n 7 result.txt | tail -n 6 | awk -F, '{print $1}' > top_ips.txt
 
 # 调用Cloudflare API更新DNS记录
 update_dns() {
