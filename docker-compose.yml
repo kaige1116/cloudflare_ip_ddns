@@ -12,7 +12,7 @@ services:
       
       # 测速配置
       - CFST_PARAMS=-f ip.txt -p 443 -t 10 -tl 200
-      - IP_COUNT=5  # 保留的IP数量
+      - IP_COUNT=6  # 保留的IP数量
       
       # 定时任务配置 (默认7天)
       - UPDATE_INTERVAL=7d

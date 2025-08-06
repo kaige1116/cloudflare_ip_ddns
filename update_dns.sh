@@ -6,7 +6,7 @@ echo "开始执行 Cloudflare IP 测速..."
 
 # 获取前5个最优IP
 echo "获取最优IP列表..."
-head -n 6 result.txt | tail -n 5 | awk -F, '{print $1}' > top_ips.txt
+head -n 7 result.txt | tail -n 6 | awk -F, '{print $1}' > top_ips.txt
 
 # 调用Cloudflare API更新DNS记录
 update_dns() {
@@ -27,13 +27,13 @@ update_dns() {
     curl -s -X PUT "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/dns_records/${RECORD_ID}" \
       -H "Authorization: Bearer ${CF_API_TOKEN}" \
       -H "Content-Type: application/json" \
-      -d '{"type":"A","name":"ip'${ip_index}'.'${CF_DOMAIN}'","content":"'${ip_address}'","ttl":120,"proxied":true}'
+      -d '{"type":"A","name":"ip'${ip_index}'.'${CF_DOMAIN}'","content":"'${ip_address}'","ttl":120,"proxied":false}'
   else
     # 创建新记录
     curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/dns_records" \
       -H "Authorization: Bearer ${CF_API_TOKEN}" \
       -H "Content-Type: application/json" \
-      -d '{"type":"A","name":"ip'${ip_index}'.'${CF_DOMAIN}'","content":"'${ip_address}'","ttl":120,"proxied":true}'
+      -d '{"type":"A","name":"ip'${ip_index}'.'${CF_DOMAIN}'","content":"'${ip_address}'","ttl":120,"proxied":false}'
   fi
 }
 
