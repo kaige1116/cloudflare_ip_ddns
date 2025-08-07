@@ -1,5 +1,10 @@
 FROM alpine:latest
 
+# 安装时区数据并设置时区
+RUN apk add --no-cache tzdata
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 WORKDIR /app
 
 # 安装必要依赖
