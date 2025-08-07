@@ -1,6 +1,21 @@
 #!/bin/bash
 set -e  # 出错时立即退出，避免继续执行
 
+# 定义输出路径（与Docker挂载路径对应）
+LOG_PATH="/var/log/cfst_update.log"  # 对应本地./logs
+RESULTS_PATH="/app/results"          # 对应本地./results
+TOP_IPS_PATH="/app/top_ips"          # 对应本地./top_ips
+
+# 确保目录存在
+mkdir -p $RESULTS_PATH $TOP_IPS_PATH
+
+# 日志函数（同时输出到控制台和文件）
+log() {
+  local msg="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+  echo $msg
+  echo $msg >> $LOG_PATH  # 写入日志文件
+}
+
 # 简化日志输出，只保留关键步骤
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
