@@ -2,7 +2,7 @@
 
 docker compose在docker compose文件
 	利用x86飞牛os的docker上运行CloudflareSpeedTest进行本地IP优选，后自动更新到cloudfalre。
-默认格式：
+默认域名格式：
 ip1.yuming.com
 ip2.yuming.com
 ip3.yuming.com
