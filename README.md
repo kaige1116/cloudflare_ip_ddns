@@ -1,5 +1,7 @@
 ###CloudflareSpeedTest项目的docker版本
 docker compose配置说明
+
+
 services:
   cfst:
     container_name: cloudflare_ip_ddns
@@ -21,6 +23,8 @@ services:
       - ./logs:/var/log
       - ./results:/app/results
     platform: linux/amd64  # 针对x86平台
+
+    
 	
 	利用docker运行CloudflareSpeedTest进行本地IP优选，后自动更新到cloudfalre。
 	默认格式：ip1.yuming.com,ip2.yuming.com,ip3.yuming.com,ip4.yuming.com,ip5.yuming.com,ip6.yuming.com,
