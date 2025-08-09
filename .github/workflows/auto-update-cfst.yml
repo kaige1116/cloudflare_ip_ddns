@@ -1,0 +1,95 @@
+name: 自动更新CloudflareSpeedTest工具包
+
+# 触发时机：每天自动运行 + 手动触发
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天 UTC 0 点执行
+  workflow_dispatch:     # 允许手动触发调试
+
+jobs:
+  update-and-organize:
+    runs-on: ubuntu-latest
+    steps:
+      # 步骤1：检出仓库代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true  # 保留权限用于提交
+
+      # 步骤2：获取最新版本信息和下载链接
+      - name: Get latest release info
+        id: get_latest
+        run: |
+          # 调用 GitHub API 获取最新 Release 数据
+          RELEASE_DATA=$(curl -s "https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest")
+          LATEST_VERSION=$(echo "$RELEASE_DATA" | jq -r '.tag_name')
+          # 提取 Linux amd64 压缩包下载链接（匹配目标文件）
+          DOWNLOAD_URL=$(echo "$RELEASE_DATA" | jq -r '.assets[] | select(.name == "cfst_linux_amd64.tar.gz") | .browser_download_url')
+          
+          echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          echo "download_url=$DOWNLOAD_URL" >> $GITHUB_OUTPUT
+          echo "✅ 最新版本：$LATEST_VERSION，下载链接：$DOWNLOAD_URL"
+
+      # 步骤3：检查是否需要更新（对比本地版本记录）
+      - name: Check update necessity
+        id: check_update
+        run: |
+          CURRENT_VERSION=$(cat cfst_linux_amd64/VERSION 2>/dev/null || echo "none")  # 版本记录存放在目标目录
+          echo "本地当前版本：$CURRENT_VERSION"
+          echo "远程最新版本：${{ steps.get_latest.outputs.latest_version }}"
+          
+          if [ "$CURRENT_VERSION" != "${{ steps.get_latest.outputs.latest_version }}" ]; then
+            echo "update_needed=true" >> $GITHUB_OUTPUT
+          else
+            echo "已是最新版本，无需更新"
+            echo "update_needed=false" >> $GITHUB_OUTPUT
+          fi
+
+      # 步骤4：下载压缩包并处理（仅当需要更新时执行）
+      - name: Download and process latest release
+        if: steps.check_update.outputs.update_needed == 'true'
+        run: |
+          # 下载压缩包（指定文件名避免冲突）
+          echo "📥 下载最新压缩包..."
+          wget -q -O cfst_temp.tar.gz ${{ steps.get_latest.outputs.download_url }}
+          
+          # 校验文件类型（规避“不支持文件类型”报错）
+          if ! file cfst_temp.tar.gz | grep -q "gzip compressed"; then
+            echo "❌ 错误：下载的文件不是有效的 gzip 压缩包！"
+            exit 1
+          fi
+
+          # 确保目标目录存在（根目录下的 cfst_linux_amd64）
+          TARGET_DIR="./cfst_linux_amd64"
+          echo "📂 检查并创建目标目录 $TARGET_DIR..."
+          mkdir -p "$TARGET_DIR"
+          
+          # 解压压缩包到临时目录，处理可能的子目录结构
+          echo "📦 解压文件到目标目录..."
+          mkdir -p cfst_unpack_temp  # 临时解压目录
+          tar -zxvf cfst_temp.tar.gz -C cfst_unpack_temp
+          
+          # 将解压后的所有文件移动到目标目录（兼容压缩包内的子目录结构）
+          # 若压缩包内有子目录，递归移动所有文件到目标目录
+          find cfst_unpack_temp -mindepth 1 -exec mv {} "$TARGET_DIR/" \;
+          
+          # 设置目标目录内二进制文件的执行权限（关键文件：cfst 或 cfst_linux_amd64）
+          chmod +x "$TARGET_DIR"/cfst* 2>/dev/null  # 兼容不同版本的二进制文件名
+          
+          # 清理临时文件
+          rm -rf cfst_temp.tar.gz cfst_unpack_temp
+          
+          # 在目标目录记录当前版本（用于下次对比）
+          echo "${{ steps.get_latest.outputs.latest_version }}" > "$TARGET_DIR/VERSION"
+          echo "✅ 已将文件部署到 $TARGET_DIR，版本更新为 ${{ steps.get_latest.outputs.latest_version }}"
+
+      # 步骤5：提交更新到仓库
+      - name: Commit and push changes
+        if: steps.check_update.outputs.update_needed == 'true'
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          git add ./cfst_linux_amd64  # 添加目标目录所有文件
+          git commit -m "Update CloudflareSpeedTest to ${{ steps.get_latest.outputs.latest_version }}"
+          git push origin main  # 替换为你的仓库主分支（如 master）
+          echo "✅ 已推送更新到仓库"
